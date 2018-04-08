@@ -1,15 +1,23 @@
 #include <string.h>
 #include <stdio.h>
+
 #include <switch.h>
 #include "graphics.h"
+
+#include "o_bin.h"
+#include "x_bin.h"
+#include "reset_bin.h"
 
 uint8_t* g_framebuf;
 u32 g_framebuf_width;
 int player_number = 1;
 int board[9] = {0,0,0,0,0,0,0,0,0};
+Bitmap *o_bitmap;
+Bitmap *x_bitmap;
+Bitmap *reset_bitmap;
 
 int CheckBoardTouchPos(uint32_t x, uint32_t y);
-void FillBoardBox(uint8_t box, color_t color);
+void FillBoardBox(uint8_t box, color_t color, Bitmap *bmp);
 void CheckForWinner();
 int CompareBoardPositions(int one, int two, int three);
 void ResetGame();
@@ -19,6 +27,15 @@ int main(int argc, char **argv)
 	gfxInitDefault();
 	u32 prev_touchcount=0;
 	
+	//Load bitmap images
+	o_bitmap = malloc(sizeof(Bitmap));
+	LoadBitmapImage((void*)o_bin, o_bitmap);
+	
+	x_bitmap = malloc(sizeof(Bitmap));
+	LoadBitmapImage((void*)x_bin, x_bitmap);
+	
+	reset_bitmap = malloc(sizeof(Bitmap));
+	LoadBitmapImage((void*)reset_bin, reset_bitmap);
 
 	while(appletMainLoop())
 	{
@@ -33,6 +50,7 @@ int main(int argc, char **argv)
 
 		if (kDown & KEY_PLUS) break; // break in order to return to hbmenu
 		
+		//Update screen touches
 		touchPosition touch;
 
         u32 touch_count = hidTouchCount();
@@ -41,18 +59,7 @@ int main(int argc, char **argv)
         {
             prev_touchcount = touch_count;
         }
-
-		//Debug draw all touches
-		/*
-        for(int i=0; i<touch_count; i++)
-        {
-            //Read the touch screen coordinates
-            hidTouchRead(&touch, i);
-
-			//Debug draw touch points in blue
-			DrawBox(touch.px + 30, touch.py - 30, 60, 60, Color(0,0,255,255));
-        }
-		*/
+		
 		if (touch_count > 0){
 			//Read the first touch only
 			hidTouchRead(&touch, 0);
@@ -72,36 +79,38 @@ int main(int argc, char **argv)
 			}
 			
 			//If the reset button is pressed, reset the board
-			if (touch.px >= 100 && touch.px <= 300 && touch.py >= 500 && touch.py <= 600){
+			if (touch.px >= 64 && touch.px <= 320 && touch.py >= 500 && touch.py <= 628){
 				ResetGame();
 			}
 		}
 		
+		//Draw the current player
 		if (player_number == 1) {
-			DrawBox(100, 100, 100, 100, Color(255,0,0,255));
+			DrawBitmap(100,100,*o_bitmap);
 		} else {
-			DrawBox(100, 100, 100, 100, Color(0,255,0,255));
+			DrawBitmap(100,100,*x_bitmap);
 		}
 		
+		//Fill in the completed parts of the board
 		for(int i = 0; i < 9; i++){
 			if (board[i] == 1) {
-				FillBoardBox(i + 1 , Color(255,0,0,255));
+				FillBoardBox(i + 1 , Color(255,0,0,255), o_bitmap);
 			}
 			
 			if (board[i] == 2) {
-				FillBoardBox(i + 1, Color(0,255,0,255));
+				FillBoardBox(i + 1, Color(0,255,0,255), x_bitmap);
 			}
 		}
 		
 		//Draw reset button
-		DrawBox(100, 500, 200, 100, Color(0,0,255,255));
+		DrawBitmap(64,500,*reset_bitmap);
 		
 		//Draw game board lines
-		DrawBox(340, 255, 600, 10, Color(0,0,0,255));
-		DrawBox(340, 455, 600, 10, Color(0,0,0,255));
+		DrawRect(340, 255, 600, 10, Color(0,0,0,255));
+		DrawRect(340, 455, 600, 10, Color(0,0,0,255));
 		
-		DrawBox(540, 55, 10, 600, Color(0,0,0,255));
-		DrawBox(740, 55, 10, 600, Color(0,0,0,255));
+		DrawRect(540, 55, 10, 600, Color(0,0,0,255));
+		DrawRect(740, 55, 10, 600, Color(0,0,0,255));
 		
 		gfxFlushBuffers();
 		gfxSwapBuffers();
@@ -166,30 +175,32 @@ int CheckBoardTouchPos(uint32_t x, uint32_t y)
 	return 1;
 }
 
-void FillBoardBox(uint8_t box, color_t color) 
+//Draw appropriate image in parts of the game board
+void FillBoardBox(uint8_t box, color_t color, Bitmap *bmp) 
 {
 	switch(box) {
-		case 1 : DrawBox(340, 55, 200, 200, color);
+		case 1 : DrawBitmap(340,55, *bmp);
 				 break;
-		case 2 : DrawBox(540, 55, 200, 200, color);
+		case 2 : DrawBitmap(540,55, *bmp);
 				 break;
-		case 3 : DrawBox(740, 55, 200, 200, color);
+		case 3 : DrawBitmap(740,55, *bmp);
 				 break;
-		case 4 : DrawBox(340, 255, 200, 200, color);
+		case 4 : DrawBitmap(340,255, *bmp);
 				 break;
-		case 5 : DrawBox(540, 255, 200, 200, color);
+		case 5 : DrawBitmap(540,255, *bmp);
 				 break;
-		case 6 : DrawBox(740, 255, 200, 200, color);
+		case 6 : DrawBitmap(740,255, *bmp);
 				 break;
-		case 7 : DrawBox(340, 455, 200, 200, color);
+		case 7 : DrawBitmap(340,455, *bmp);
 				 break;
-		case 8 : DrawBox(540, 455, 200, 200, color);
+		case 8 : DrawBitmap(540,455, *bmp);
 				 break;
-		case 9 : DrawBox(740, 455, 200, 200, color);
+		case 9 : DrawBitmap(740,455, *bmp);
 				 break;
 	}
 }
 
+//Check all possible win combinations
 void CheckForWinner()
 {
 	if (CompareBoardPositions(board[0], board[1], board[2]) ||
@@ -201,6 +212,7 @@ void CheckForWinner()
 		CompareBoardPositions(board[0], board[4], board[8]) ||
 		CompareBoardPositions(board[2], board[4], board[6])) 
 		{
+			//If there is a winner, fill entire board with their symbol to end the game
 			for(int i = 0; i < 9; i++){
 				if (player_number == 1) {
 					board[i] = 1;
