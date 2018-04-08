@@ -35,6 +35,9 @@ SOURCES		:=	source
 DATA		:=	data
 INCLUDES	:=	include
 EXEFS_SRC	:=	exefs_src
+APP_TITLE	:=	Switch OXO
+APP_AUTHOR	:=	Dan3D
+ICON		:= 	switch-oxo.jpg
 
 #---------------------------------------------------------------------------------
 # options for code generation
